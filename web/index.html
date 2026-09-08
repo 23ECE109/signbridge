@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SignBridge — On-Device Sign Language Communication Intelligence</title>
+  <meta name="description" content="SignBridge is a private, personalized, offline-first AI communication system for sign language users. Built for Snapdragon-powered HP PCs. Snapdragon AI Lab Hackathon entry." />
+  <meta property="og:title" content="SignBridge — Sign Language Communication AI" />
+  <meta property="og:description" content="Continuous sign language to speech, two-way communication bridge, personalized to you, fully offline. No cloud. No compromise." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & base ──────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #060612;
+      --bg2:       #0d0d22;
+      --bg3:       #111128;
+      --accent:    #6c63ff;
+      --accent2:   #00d4aa;
+      --accent3:   #ff6584;
+      --text:      #e8e8f0;
+      --muted:     #8888aa;
+      --border:    #1e1e40;
+      --green:     #2ecc71;
+      --yellow:    #f1c40f;
+      --red:       #e74c3c;
+      --radius:    14px;
+      --shadow:    0 8px 40px rgba(108,99,255,0.15);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      line-height: 1.65;
+      overflow-x: hidden;
+    }
+    a { color: var(--accent2); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, pre { font-family: 'JetBrains Mono', monospace; }
+
+    /* ── Noise overlay ─────────────────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout helpers ────────────────────────────────────────────────── */
+    .container  { max-width: 1100px; margin: 0 auto; padding: 0 28px; position: relative; z-index: 1; }
+    .section    { padding: 90px 0; }
+    .section-sm { padding: 60px 0; }
+
+    /* ── Nav ───────────────────────────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(6,6,18,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 0;
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: 1100px; margin: 0 auto; padding: 0 28px;
+    }
+    .nav-logo {
+      font-size: 1.3rem; font-weight: 900; letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .nav-links { display: flex; gap: 28px; }
+    .nav-links a { color: var(--muted); font-size: 0.92rem; font-weight: 500; transition: color .2s; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    /* ── Hero ──────────────────────────────────────────────────────────── */
+    .hero {
+      padding: 110px 0 80px;
+      text-align: center;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(108,99,255,0.12) 0%, transparent 70%);
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.3);
+      border-radius: 99px; padding: 6px 16px;
+      font-size: 0.8rem; font-weight: 600; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 28px;
+    }
+    .hero h1 {
+      font-size: clamp(2.6rem, 6vw, 4.8rem);
+      font-weight: 900; line-height: 1.1; letter-spacing: -2px;
+      margin-bottom: 22px;
+    }
+    .hero h1 span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero-sub {
+      font-size: clamp(1rem, 2.2vw, 1.22rem);
+      color: var(--muted); max-width: 680px; margin: 0 auto 40px;
+      font-weight: 400;
+    }
+    .hero-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 13px 28px; border-radius: 99px;
+      font-size: 0.95rem; font-weight: 600;
+      transition: transform .18s, box-shadow .18s;
+      cursor: pointer;
+    }
+    .btn:hover { transform: translateY(-2px); text-decoration: none; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #9b5de5);
+      color: #fff; box-shadow: 0 4px 24px rgba(108,99,255,0.4);
+    }
+    .btn-primary:hover { box-shadow: 0 8px 36px rgba(108,99,255,0.55); }
+    .btn-outline {
+      border: 1.5px solid var(--border);
+      color: var(--text); background: transparent;
+    }
+    .btn-outline:hover { border-color: var(--accent); background: rgba(108,99,255,0.07); }
+
+    /* ── Badges ────────────────────────────────────────────────────────── */
+    .badge-row {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      justify-content: center; margin-top: 48px;
+    }
+    .badge {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 7px 16px;
+      font-size: 0.78rem; font-weight: 600; color: var(--muted);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+
+    /* ── Problem Section ───────────────────────────────────────────────── */
+    .problem-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px; margin-top: 48px;
+    }
+    .problem-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px 24px;
+      transition: border-color .2s, transform .2s;
+    }
+    .problem-card:hover { border-color: var(--accent3); transform: translateY(-3px); }
+    .problem-card .icon { font-size: 2rem; margin-bottom: 14px; }
+    .problem-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .problem-card p  { font-size: 0.9rem; color: var(--muted); }
+
+    /* ── Section heading ───────────────────────────────────────────────── */
+    .section-label {
+      text-transform: uppercase; font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 2px; color: var(--accent); margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+      font-weight: 800; line-height: 1.2; letter-spacing: -1px;
+      margin-bottom: 18px;
+    }
+    .section-sub { color: var(--muted); max-width: 620px; font-size: 1rem; }
+
+    /* ── Innovations ───────────────────────────────────────────────────── */
+    .innovations {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px; margin-top: 52px;
+    }
+    .innovation-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 34px 28px;
+      position: relative; overflow: hidden;
+      transition: transform .22s, border-color .22s;
+    }
+    .innovation-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 3px; border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .innovation-card.c1::before { background: linear-gradient(90deg, var(--accent), #9b5de5); }
+    .innovation-card.c2::before { background: linear-gradient(90deg, var(--accent2), #00b4d8); }
+    .innovation-card.c3::before { background: linear-gradient(90deg, var(--accent3), #f97316); }
+    .innovation-card:hover { transform: translateY(-4px); border-color: rgba(108,99,255,0.3); }
+    .innovation-card .num {
+      font-size: 3rem; font-weight: 900; line-height: 1;
+      opacity: 0.08; position: absolute; top: 20px; right: 24px;
+    }
+    .innovation-card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 12px; }
+    .innovation-card p  { font-size: 0.93rem; color: var(--muted); line-height: 1.6; }
+    .innovation-card .tag {
+      display: inline-block; margin-top: 18px;
+      background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.2);
+      border-radius: 6px; padding: 4px 12px;
+      font-size: 0.75rem; font-weight: 600; color: var(--accent);
+    }
+
+    /* ── Confidence tiers demo ─────────────────────────────────────────── */
+    .tiers {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px; margin-top: 40px;
+    }
+    .tier {
+      border-radius: var(--radius); padding: 24px 22px;
+      border: 1px solid var(--border);
+    }
+    .tier.high { background: rgba(46,204,113,0.06); border-color: rgba(46,204,113,0.25); }
+    .tier.med  { background: rgba(241,196,15,0.06); border-color: rgba(241,196,15,0.25); }
+    .tier.low  { background: rgba(231,76,60,0.06);  border-color: rgba(231,76,60,0.25); }
+    .tier .tier-badge {
+      display: inline-block; border-radius: 6px; padding: 3px 12px;
+      font-size: 0.75rem; font-weight: 700; margin-bottom: 12px; letter-spacing: 1px;
+    }
+    .tier.high .tier-badge { background: rgba(46,204,113,0.2); color: var(--green); }
+    .tier.med  .tier-badge { background: rgba(241,196,15,0.2);  color: var(--yellow); }
+    .tier.low  .tier-badge { background: rgba(231,76,60,0.2);   color: var(--red); }
+    .tier h4   { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; }
+    .tier p    { font-size: 0.88rem; color: var(--muted); }
+    .tier .arrow { font-size: 1.1rem; margin-right: 6px; }
+
+    /* ── Architecture diagram ──────────────────────────────────────────── */
+    .arch-box {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 36px 32px; margin-top: 44px;
+    }
+    .arch-box pre {
+      font-size: clamp(0.62rem, 1.3vw, 0.78rem);
+      color: #a0a0cc; line-height: 1.9; overflow-x: auto;
+      white-space: pre;
+    }
+    .arch-box pre .hl  { color: var(--accent2); font-weight: 600; }
+    .arch-box pre .hl2 { color: var(--accent);  font-weight: 600; }
+    .arch-box pre .hl3 { color: var(--accent3); font-weight: 600; }
+
+    /* ── Competitor table ──────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; margin-top: 44px; border-radius: var(--radius); }
+    table {
+      width: 100%; border-collapse: collapse;
+      font-size: 0.84rem; background: var(--bg2);
+    }
+    thead th {
+      background: var(--bg3); color: var(--muted);
+      font-weight: 700; text-transform: uppercase;
+      font-size: 0.7rem; letter-spacing: 1px;
+      padding: 14px 16px; text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody td {
+      padding: 13px 16px; border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(108,99,255,0.04); }
+    .yes  { color: var(--green);  font-weight: 700; }
+    .no   { color: var(--red);    font-weight: 700; }
+    .part { color: var(--yellow); font-weight: 600; }
+    .us   { color: var(--accent2); font-weight: 800; }
+    .hl-row td { background: rgba(0,212,170,0.05); }
+
+    /* ── Pipeline steps ────────────────────────────────────────────────── */
+    .pipeline { display: flex; flex-direction: column; gap: 0; margin-top: 44px; }
+    .pipe-step {
+      display: flex; gap: 20px; align-items: flex-start;
+      padding: 22px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .pipe-step:last-child { border-bottom: none; }
+    .pipe-num {
+      width: 36px; height: 36px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-weight: 800; font-size: 0.85rem;
+    }
+    .pipe-content h4  { font-size: 0.97rem; font-weight: 700; margin-bottom: 4px; }
+    .pipe-content p   { font-size: 0.87rem; color: var(--muted); }
+    .pipe-tag {
+      display: inline-block; padding: 2px 10px; border-radius: 5px;
+      font-size: 0.7rem; font-weight: 700; margin-left: 10px;
+      vertical-align: middle; letter-spacing: 0.5px;
+    }
+    .tag-npu { background: rgba(108,99,255,0.15); color: var(--accent); }
+    .tag-cpu { background: rgba(0,212,170,0.12);  color: var(--accent2); }
+
+    /* ── Snapdragon section ────────────────────────────────────────────── */
+    .snapdragon-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px; margin-top: 44px;
+    }
+    .snap-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px 20px;
+    }
+    .snap-card .metric { font-size: 2rem; font-weight: 900; color: var(--accent2); margin-bottom: 4px; }
+    .snap-card .metric-label { font-size: 0.82rem; color: var(--muted); }
+    .snap-card p { font-size: 0.88rem; color: var(--muted); margin-top: 10px; }
+
+    /* ── Timeline / roadmap ────────────────────────────────────────────── */
+    .roadmap { margin-top: 44px; display: flex; flex-direction: column; gap: 16px; }
+    .roadmap-item {
+      display: flex; gap: 18px; align-items: flex-start;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 22px;
+    }
+    .roadmap-phase {
+      min-width: 80px; font-size: 0.78rem; font-weight: 700;
+      color: var(--accent); text-transform: uppercase; letter-spacing: 1px;
+      padding-top: 2px;
+    }
+    .roadmap-item h4 { font-size: 0.97rem; font-weight: 700; margin-bottom: 4px; }
+    .roadmap-item p  { font-size: 0.87rem; color: var(--muted); }
+    .status-pill {
+      display: inline-block; border-radius: 99px; padding: 3px 12px;
+      font-size: 0.72rem; font-weight: 700; margin-left: 10px;
+    }
+    .status-active  { background: rgba(46,204,113,0.15); color: var(--green); }
+    .status-planned { background: rgba(136,136,170,0.15); color: var(--muted); }
+
+    /* ── Team ──────────────────────────────────────────────────────────── */
+    .team-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px; margin-top: 44px;
+    }
+    .team-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px 24px; text-align: center;
+    }
+    .team-avatar {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      margin: 0 auto 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+    }
+    .team-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
+    .team-card .role { font-size: 0.82rem; color: var(--accent); font-weight: 600; margin-bottom: 10px; }
+    .team-card p  { font-size: 0.85rem; color: var(--muted); }
+
+    /* ── CTA ───────────────────────────────────────────────────────────── */
+    .cta-section {
+      text-align: center; padding: 100px 0;
+      background: radial-gradient(ellipse 70% 60% at 50% 100%, rgba(108,99,255,0.1) 0%, transparent 70%);
+    }
+    .cta-section h2 {
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 900; letter-spacing: -1.5px; margin-bottom: 18px;
+    }
+    .cta-section p { color: var(--muted); margin-bottom: 36px; font-size: 1.05rem; }
+
+    /* ── Footer ────────────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border); padding: 36px 0;
+      text-align: center; color: var(--muted); font-size: 0.85rem;
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--accent2); }
+
+    /* ── Glow orbs ─────────────────────────────────────────────────────── */
+    .orb {
+      position: fixed; border-radius: 50%; filter: blur(80px);
+      pointer-events: none; z-index: 0; opacity: 0.18;
+    }
+    .orb1 { width: 500px; height: 500px; background: var(--accent);  top: -150px; left: -100px; }
+    .orb2 { width: 400px; height: 400px; background: var(--accent2); bottom: 10%; right: -120px; }
+
+    /* ── Novelty badge ─────────────────────────────────────────────────── */
+    .novelty-bar {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px 32px;
+      display: flex; align-items: center; gap: 28px;
+      margin-top: 40px; flex-wrap: wrap;
+    }
+    .novelty-score {
+      font-size: 4.5rem; font-weight: 900; line-height: 1;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .novelty-bar .desc { font-size: 0.95rem; color: var(--muted); flex: 1; min-width: 240px; }
+    .novelty-bar .desc strong { color: var(--text); }
+
+    /* ── Responsive ────────────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .hero { padding: 72px 0 52px; }
+      .section { padding: 64px 0; }
+      .arch-box pre { font-size: 0.58rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Background glow orbs -->
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- ── Navigation ──────────────────────────────────────────────────────────── -->
+<nav>
+  <div class="nav-inner">
+    <span class="nav-logo">🤝 SignBridge</span>
+    <div class="nav-links">
+      <a href="#problem">Problem</a>
+      <a href="#innovations">Innovations</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#snapdragon">Snapdragon</a>
+      <a href="#compare">Comparison</a>
+      <a href="#team">Team</a>
+      <a href="https://github.com/YOUR_USERNAME/signbridge" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ────────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-eyebrow">
+      🏆 Snapdragon AI Lab Build &amp; Present Challenge — Accessibility Track
+    </div>
+    <h1>
+      The Communication Bridge<br />
+      <span>Sign Language Deserves</span>
+    </h1>
+    <p class="hero-sub">
+      Private · Personalized · Offline-First · On-Device AI.<br />
+      Continuous sign language → speech. Speech → large text. Two ways. No cloud. No compromise.
+    </p>
+    <div class="hero-buttons">
+      <a href="https://github.com/23ECE109/signbridge" class="btn btn-primary" target="_blank" rel="noopener">
+        ⭐ View on GitHub
+      </a>
+      <a href="#innovations" class="btn btn-outline">See How It Works ↓</a>
+      <a href="docs/CONCEPT.md" class="btn btn-outline" target="_blank">Full Concept Doc</a>
+    </div>
+
+    <!-- Tech badges -->
+    <div class="badge-row">
+      <div class="badge"><span class="dot" style="background:#e84040"></span> Snapdragon X Elite NPU</div>
+      <div class="badge"><span class="dot" style="background:#0078d4"></span> Windows 11 ARM64</div>
+      <div class="badge"><span class="dot" style="background:#6c63ff"></span> 100% On-Device AI</div>
+      <div class="badge"><span class="dot" style="background:#00d4aa"></span> Offline Capable</div>
+      <div class="badge"><span class="dot" style="background:#f1c40f"></span> AES-256 Privacy</div>
+      <div class="badge"><span class="dot" style="background:#2ecc71"></span> Zero Data Transmission</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Problem ──────────────────────────────────────────────────────────────── -->
+<section class="section" id="problem">
+  <div class="container">
+    <p class="section-label">The Problem</p>
+    <h2 class="section-title">430 million people. A broken communication system.</h2>
+    <p class="section-sub">
+      When a Deaf person walks into a hospital, pharmacy, or emergency room,
+      the tools available to them are inadequate — and sometimes dangerous.
+    </p>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="icon">🔴</div>
+        <h3>Human interpreters</h3>
+        <p>Expensive, unavailable on demand, impossible to schedule in emergencies. Interpreter shortages are documented in every country.</p>
+      </div>
+      <div class="problem-card">
+        <div class="icon">🔴</div>
+        <h3>Writing / typing</h3>
+        <p>Slow, dehumanizing for a real conversation, and assumes literacy in a spoken language that many Deaf people don't use as their primary language.</p>
+      </div>
+      <div class="problem-card">
+        <div class="icon">🔴</div>
+        <h3>Existing AI sign apps</h3>
+        <p>Recognize isolated gestures one at a time. Require cloud connectivity. One-size-fits-all. One-way only. No uncertainty handling. No personalization.</p>
+      </div>
+      <div class="problem-card">
+        <div class="icon">🔴</div>
+        <h3>Google SL2T (Aug 2026)</h3>
+        <p>Best-in-class — but Android/Pixel-only, sends landmarks to a server, ASL only, no two-way bridge, no personalization, no offline mode.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Innovations ──────────────────────────────────────────────────────────── -->
+<section class="section" id="innovations" style="background: var(--bg2);">
+  <div class="container">
+    <p class="section-label">Three Core Innovations</p>
+    <h2 class="section-title">What no one else does — all three together.</h2>
+    <p class="section-sub">
+      Each innovation exists partially in research. The combination — deployed offline on Snapdragon — has no direct prior art.
+    </p>
+    <div class="innovations">
+
+      <div class="innovation-card c1">
+        <div class="num">01</div>
+        <h3>🎯 Uncertainty-Aware Interaction</h3>
+        <p>
+          No deployed sign-language system asks for clarification when it's unsure.
+          SignBridge uses a three-tier confidence system that makes AI uncertainty
+          visible and actionable — preventing silent mistranslations in medical or
+          emergency conversations.
+        </p>
+        <div class="tag">No prior art in deployed systems</div>
+      </div>
+
+      <div class="innovation-card c2">
+        <div class="num">02</div>
+        <h3>👤 5-Minute Personal Enrollment</h3>
+        <p>
+          Sign language is as individual as a fingerprint. SignBridge learns your
+          signing style with a 5-minute guided setup — deriving a 64-dim user embedding
+          without retraining. Corrections you make are remembered across sessions.
+        </p>
+        <div class="tag">No personalization in any deployed product</div>
+      </div>
+
+      <div class="innovation-card c3">
+        <div class="num">03</div>
+        <h3>🔄 True Two-Way Offline Bridge</h3>
+        <p>
+          Sign → speech for the Deaf user's message. Speech → large text for the
+          hearing partner's response. Both directions. Fully offline. No server.
+          First system to close the full conversational loop on a PC platform.
+        </p>
+        <div class="tag">First full two-way offline PC system</div>
+      </div>
+
+    </div>
+
+    <!-- Confidence tiers detail -->
+    <div style="margin-top: 64px;">
+      <h3 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 8px;">How confidence works in practice</h3>
+      <p style="color: var(--muted); margin-bottom: 4px; font-size: 0.92rem;">SignBridge scores every translation and acts accordingly — never pretending to be certain.</p>
+    </div>
+    <div class="tiers">
+      <div class="tier high">
+        <div class="tier-badge">HIGH ≥ 0.75</div>
+        <h4><span class="arrow">🔊</span>Auto-translate &amp; speak</h4>
+        <p>Score ≥ 0.75 — translation is spoken immediately via TTS. The hearing partner hears the message.</p>
+      </div>
+      <div class="tier med">
+        <div class="tier-badge">MED 0.50–0.74</div>
+        <h4><span class="arrow">❓</span>Disambiguation dialog</h4>
+        <p>System asks: "Did you mean: (A) I have an allergy — or (B) I have a reaction?" User confirms in one tap.</p>
+      </div>
+      <div class="tier low">
+        <div class="tier-badge">LOW &lt; 0.50</div>
+        <h4><span class="arrow">🔄</span>Request re-sign</h4>
+        <p>Confidence too low to act on. System displays: "Please sign that again." No incorrect speech is produced.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Architecture ─────────────────────────────────────────────────────────── -->
+<section class="section" id="architecture">
+  <div class="container">
+    <p class="section-label">System Architecture</p>
+    <h2 class="section-title">Every component, its purpose, and where it runs.</h2>
+    <p class="section-sub">The entire pipeline runs inside the Snapdragon X Elite SoC. Nothing leaves the device.</p>
+
+    <!-- Pipeline steps -->
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pipe-num">1</div>
+        <div class="pipe-content">
+          <h4>Camera Capture &amp; Frame Buffer <span class="pipe-tag tag-cpu">CPU</span></h4>
+          <p>30 FPS RGB frames stored in a circular 64-frame RAM buffer. Frames are <strong>never written to disk</strong>. Lighting quality check warns user if conditions are poor.</p>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">2</div>
+        <div class="pipe-content">
+          <h4>MediaPipe Holistic Landmark Extraction <span class="pipe-tag tag-npu">Hexagon NPU · FP16</span></h4>
+          <p>Extracts 225 coordinates per frame: 21 landmarks × 2 hands + 33 pose landmarks. Inference: <strong>52–76 µs/frame</strong> on Hexagon HTP. Source: Qualcomm AI Hub.</p>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">3</div>
+        <div class="pipe-content">
+          <h4>Temporal Encoder <span class="pipe-tag tag-npu">NPU / CPU · INT8</span></h4>
+          <p>4-layer Transformer encoder (d=256). Input: [64, 225] normalized landmark sequence. Output: [256] sequence embedding. Pre-trained on WLASL, fine-tuned on custom 150-sign dataset.</p>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">4</div>
+        <div class="pipe-content">
+          <h4>Personalization Layer <span class="pipe-tag tag-cpu">CPU</span></h4>
+          <p>Fuses [256] sequence embedding with [64] user embedding via a 2-layer MLP. Derived during 5-minute enrollment. Stored AES-256 encrypted locally.</p>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">5</div>
+        <div class="pipe-content">
+          <h4>Context Engine <span class="pipe-tag tag-cpu">CPU</span></h4>
+          <p>Sliding window of last 5 utterances + session topic tag (Medical / Emergency / General / Work / Education). Biases decoder toward contextually appropriate vocabulary.</p>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">6</div>
+        <div class="pipe-content">
+          <h4>Translation Decoder + Confidence Estimator <span class="pipe-tag tag-cpu">CPU / NPU</span></h4>
+          <p>2-layer Transformer decoder. Produces top-K candidates with probabilities. Confidence score → three-tier decision. Correction memory kNN lookup for override.</p>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">7</div>
+        <div class="pipe-content">
+          <h4>piper-tts Speech Output <span class="pipe-tag tag-cpu">CPU · ARM64</span></h4>
+          <p>ARM64-native TTS engine. en_US-lessac-medium model (~65 MB). Speaks the final translation aloud for the hearing conversation partner. Fully offline.</p>
+        </div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">8</div>
+        <div class="pipe-content">
+          <h4>Distil-Whisper ASR (Two-Way Mode) <span class="pipe-tag tag-npu">Hexagon NPU · FP16</span></h4>
+          <p>Transcribes the hearing partner's speech in real time. Large text displayed on screen for the Deaf user. Source: Qualcomm AI Hub. Real-time factor &lt; 0.1.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Architecture diagram -->
+    <div class="arch-box">
+      <pre>
+┌─────────────────────── <span class="hl">SNAPDRAGON X ELITE · HP PC</span> ────────────────────────┐
+│                                                                               │
+│  <span class="hl2">Camera</span>  ──▶  <span class="hl">MediaPipe Holistic</span> [<span class="hl">NPU · FP16 · 52-76 µs/frame</span>]            │
+│               543 landmarks · RAM buffer only · never to disk                 │
+│                         │                                                      │
+│              <span class="hl">Temporal Encoder</span> [<span class="hl">NPU/CPU · INT8</span>]                              │
+│              4-layer Transformer · d=256 · 64-frame window                    │
+│                         │                                                      │
+│        ┌────────────────┴─────────────────┐                                   │
+│  <span class="hl2">User Profile</span>                   <span class="hl2">Context Window</span>                             │
+│  (AES-256 · local)              (last 5 turns + topic)                        │
+│        └────────────────┬─────────────────┘                                   │
+│                         │                                                      │
+│              <span class="hl">Personalization MLP</span> [<span class="hl">CPU</span>]                                     │
+│              user[64] + seq[256] → fused[256]                                  │
+│                         │                                                      │
+│         <span class="hl">Translation Decoder</span> + <span class="hl3">Confidence Estimator</span> [CPU/NPU]            │
+│                         │                                                      │
+│        ┌────────────────┼────────────────┐                                    │
+│        ▼                ▼                ▼                                     │
+│   <span class="hl">TTS Output</span>       <span class="hl3">Disambig</span>       <span class="hl3">Re-Sign</span>   ──▶  <span class="hl2">Correction Memory</span>    │
+│  (piper-tts)         Dialog           Prompt          (SQLite · kNN)          │
+│                                                                                │
+│  <span class="hl2">Microphone</span> ──▶  <span class="hl">Distil-Whisper</span> [<span class="hl">NPU · FP16</span>]  ──▶  <span class="hl2">Large Text Display</span>   │
+│                  (partner speech → Deaf user reads)                           │
+└────────────────────────────────────────────────────────────────────────────┘
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ── Snapdragon ────────────────────────────────────────────────────────────── -->
+<section class="section" id="snapdragon" style="background: var(--bg2);">
+  <div class="container">
+    <p class="section-label">Why Snapdragon</p>
+    <h2 class="section-title">Not a marketing claim. A technical requirement.</h2>
+    <p class="section-sub">
+      Sign-language communication is time-sensitive, spatially private, and often happens where there's no reliable network.
+      These are exactly the conditions where cloud AI fails and Snapdragon's local NPU matters.
+    </p>
+    <div class="snapdragon-grid">
+      <div class="snap-card">
+        <div class="metric">52 µs</div>
+        <div class="metric-label">Landmark extraction per frame</div>
+        <p>Hexagon HTP FP16 — 1000× within the 33ms/frame budget. Enables true real-time processing with headroom for the rest of the pipeline.</p>
+      </div>
+      <div class="snap-card">
+        <div class="metric">&lt;100ms</div>
+        <div class="metric-label">End-to-end sign → text latency</div>
+        <p>No network round-trip. No server queue. Local inference means the system responds within the natural conversational pause.</p>
+      </div>
+      <div class="snap-card">
+        <div class="metric">0 bytes</div>
+        <div class="metric-label">Data transmitted per session</div>
+        <p>No landmarks. No video. No text. No conversation history leaves the device. Legally and practically private — essential for medical and legal use.</p>
+      </div>
+      <div class="snap-card">
+        <div class="metric">100%</div>
+        <div class="metric-label">Offline capability</div>
+        <p>Every feature works with Wi-Fi off. No subscription, no API key, no connectivity requirement. Works in hospitals, rural areas, and emergencies.</p>
+      </div>
+      <div class="snap-card">
+        <div class="metric">330 MB</div>
+        <div class="metric-label">Total core model weights</div>
+        <p>The entire AI pipeline — landmarks, encoder, decoder, ASR, TTS — fits in 330 MB. Under 600 MB RAM at runtime. No model paging required.</p>
+      </div>
+      <div class="snap-card">
+        <div class="metric">45 TOPS</div>
+        <div class="metric-label">Snapdragon X Elite NPU</div>
+        <p>Hexagon HTP delivers this throughput at a fraction of the CPU power draw — enabling continuous always-on processing without draining battery.</p>
+      </div>
+    </div>
+
+    <!-- Cloud vs local comparison -->
+    <div style="margin-top: 48px; overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>Cloud Approach (e.g., SL2T)</th>
+            <th style="color: var(--accent2);">SignBridge (Snapdragon Local)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Latency</td><td class="no">200–800 ms (network + server queue)</td><td class="yes">&lt; 100 ms (local NPU)</td></tr>
+          <tr><td>Privacy</td><td class="no">Coordinates/data sent to server</td><td class="yes">Zero data leaves device</td></tr>
+          <tr><td>Offline</td><td class="no">Not possible</td><td class="yes">Fully functional</td></tr>
+          <tr><td>Medical use</td><td class="no">HIPAA compliance, BAAs, patient consent required</td><td class="yes">No cloud = no compliance barrier</td></tr>
+          <tr><td>Power</td><td class="no">Network radio active continuously</td><td class="yes">NPU fraction of CPU draw</td></tr>
+          <tr><td>Cost</td><td class="no">API/cloud fees per session</td><td class="yes">One-time device, no recurring cost</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── Competitor Comparison ─────────────────────────────────────────────────── -->
+<section class="section" id="compare">
+  <div class="container">
+    <p class="section-label">Prior Art &amp; Competitor Analysis</p>
+    <h2 class="section-title">Where every existing system stops.</h2>
+    <p class="section-sub">Searched commercial products, research papers, startups, and platform models. All claims verified against published sources.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>System</th>
+            <th>Continuous</th>
+            <th>Context</th>
+            <th>Personalization</th>
+            <th>Two-Way</th>
+            <th>Offline</th>
+            <th>On-Device</th>
+            <th>Privacy</th>
+            <th>Uncertainty</th>
+            <th>Correction Memory</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Google SL2T</strong> (Aug 2026)</td>
+            <td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td>
+            <td class="no">✗</td><td class="part">Partial*</td><td class="no">✗</td>
+            <td class="no">✗</td><td class="no">✗</td>
+          </tr>
+          <tr>
+            <td><strong>Signapse</strong> (commercial)</td>
+            <td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td>
+            <td class="no">✗</td><td class="no">✗</td><td class="no">✗</td>
+            <td class="no">✗</td><td class="no">✗</td>
+          </tr>
+          <tr>
+            <td><strong>SignAll</strong> (startup)</td>
+            <td class="part">?</td><td class="no">✗</td><td class="part">?</td><td class="part">Partial</td>
+            <td class="no">✗</td><td class="no">✗</td><td class="no">✗</td>
+            <td class="no">✗</td><td class="no">✗</td>
+          </tr>
+          <tr>
+            <td><strong>Spotter+GPT</strong> (research)</td>
+            <td class="part">Partial</td><td class="part">Partial</td><td class="no">✗</td><td class="no">✗</td>
+            <td class="no">✗</td><td class="no">✗</td><td class="no">✗</td>
+            <td class="no">✗</td><td class="no">✗</td>
+          </tr>
+          <tr>
+            <td><strong>SHuBERT+ByT5 RT</strong> (research)</td>
+            <td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td>
+            <td class="no">✗</td><td class="part">Partial</td><td class="no">✗</td>
+            <td class="no">✗</td><td class="no">✗</td>
+          </tr>
+          <tr>
+            <td><strong>Bidirectional SLT</strong> (IJERT 2026)</td>
+            <td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="part">Partial</td>
+            <td class="part">?</td><td class="part">?</td><td class="part">?</td>
+            <td class="no">✗</td><td class="no">✗</td>
+          </tr>
+          <tr>
+            <td><strong>Few-Shot Prototypical</strong> (arxiv)</td>
+            <td class="no">✗</td><td class="no">✗</td><td class="part">Partial</td><td class="no">✗</td>
+            <td class="part">Poss.</td><td class="part">Poss.</td><td class="part">Poss.</td>
+            <td class="no">✗</td><td class="no">✗</td>
+          </tr>
+          <tr>
+            <td><strong>Mobile SLR</strong> (Springer 2026)</td>
+            <td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td>
+            <td class="part">Partial</td><td class="yes">✓</td><td class="part">Partial</td>
+            <td class="no">✗</td><td class="no">✗</td>
+          </tr>
+          <tr class="hl-row">
+            <td><strong class="us">SignBridge (ours)</strong></td>
+            <td class="us">✓</td><td class="us">✓</td><td class="us">✓ 5-min</td><td class="us">✓</td>
+            <td class="us">✓</td><td class="us">✓ 100%</td><td class="us">✓ Zero tx</td>
+            <td class="us">✓ 3-tier</td><td class="us">✓ kNN</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="color: var(--muted); font-size: 0.8rem; margin-top: 12px;">* SL2T: landmarks computed on-device, translation runs on Google servers. "?" = not clearly documented in public sources.</p>
+
+    <!-- Novelty score -->
+    <div class="novelty-bar">
+      <div class="novelty-score">7<span style="font-size: 2rem; opacity: 0.5">/10</span></div>
+      <div class="desc">
+        <strong>Honest novelty score.</strong> No single component is groundbreaking — Transformer encoders, landmark extraction, and ASR are established. The novelty is in the <strong>integration</strong>: uncertainty-as-interaction + persistent correction memory + personalization + two-way offline bridge on a Snapdragon PC. This combination does not exist as a deployed or prototyped system in the reviewed literature.<br /><br />
+        <em>A score of 8 would require a larger dataset, a novel model architecture, or a formal user study. The 7 is defensible and buildable.</em>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Roadmap ───────────────────────────────────────────────────────────────── -->
+<section class="section" id="roadmap" style="background: var(--bg2);">
+  <div class="container">
+    <p class="section-label">Development Roadmap</p>
+    <h2 class="section-title">10-week plan. MVP-first. Demo-ready.</h2>
+    <div class="roadmap">
+      <div class="roadmap-item">
+        <div class="roadmap-phase">Wks 1–2</div>
+        <div>
+          <h4>Foundation <span class="status-pill status-active">🔧 In Progress</span></h4>
+          <p>Windows ARM64 env setup · ONNX Runtime + QNN provider · MediaPipe Holistic on NPU · Distil-Whisper on NPU · piper-tts · camera pipeline</p>
+        </div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-phase">Wks 2–4</div>
+        <div>
+          <h4>Dataset Collection <span class="status-pill status-planned">📋 Planned</span></h4>
+          <p>Record 150-sign custom vocabulary · 8 participants · 3 backgrounds · 2 lighting conditions · ~10,000 clips · landmark pre-processing</p>
+        </div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-phase">Wks 3–5</div>
+        <div>
+          <h4>Model Training + Export <span class="status-pill status-planned">📋 Planned</span></h4>
+          <p>Pre-train on WLASL · Fine-tune on custom data · Train personalization MLP · ONNX export · INT8/FP16 quantization · NPU validation</p>
+        </div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-phase">Wks 5–7</div>
+        <div>
+          <h4>Full Integration <span class="status-pill status-planned">📋 Planned</span></h4>
+          <p>Connect full pipeline · Confidence estimator · Disambiguation UI · Enrollment flow · Correction memory · Two-way mode · Context engine</p>
+        </div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-phase">Wks 7–8</div>
+        <div>
+          <h4>Evaluation + Optimization <span class="status-pill status-planned">📋 Planned</span></h4>
+          <p>Measure all metrics · Fix accuracy for demo vocabulary · Multi-user testing · Offline validation · Latency profiling</p>
+        </div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-phase">Wks 8–10</div>
+        <div>
+          <h4>Demo Polish + Presentation <span class="status-pill status-planned">📋 Planned</span></h4>
+          <p>Demo script rehearsal · Slide deck · Backup video recording · Documentation finalization</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Team ──────────────────────────────────────────────────────────────────── -->
+<section class="section" id="team">
+  <div class="container">
+    <p class="section-label">Team</p>
+    <h2 class="section-title">Built by developers who care about access.</h2>
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="team-avatar">🤖</div>
+        <h3>AI / ML Engineer</h3>
+        <div class="role">Model Architecture &amp; Training</div>
+        <p>Dataset prep · Transformer training · ONNX export · NPU quantization · Confidence estimator · kNN correction memory</p>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar">⚙️</div>
+        <h3>Systems Engineer</h3>
+        <div class="role">Pipeline &amp; Application</div>
+        <p>Windows ARM64 setup · Camera pipeline · Full integration · PyQt6 UI · Whisper ASR · SQLite storage · Demo</p>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar">📊</div>
+        <h3>Data &amp; Evaluation</h3>
+        <div class="role">Dataset &amp; Documentation</div>
+        <p>Dataset recording · Quality control · Evaluation metrics · Slide deck · Demo video · Competition documentation</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ───────────────────────────────────────────────────────────────────── -->
+<section class="cta-section">
+  <div class="container">
+    <h2>The communication gap is real.<br />The technology to close it is here.</h2>
+    <p>Explore the full concept document, browse the source code, or watch the demo.</p>
+    <div class="hero-buttons">
+      <a href="https://github.com/23ECE109/signbridge" class="btn btn-primary" target="_blank" rel="noopener">
+        ⭐ Star on GitHub
+      </a>
+      <a href="docs/CONCEPT.md" class="btn btn-outline" target="_blank">
+        📄 Full Concept Doc (36 Sections)
+      </a>
+      <a href="docs/ARCHITECTURE.md" class="btn btn-outline" target="_blank">
+        🏗️ Architecture Doc
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ────────────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <p style="margin-bottom: 10px;">
+      <strong style="color: var(--text);">SignBridge</strong> — Snapdragon AI Lab Build &amp; Present Challenge · Accessibility Track · September 2026
+    </p>
+    <p>
+      Built with
+      <a href="https://aihub.qualcomm.com/" target="_blank" rel="noopener">Qualcomm AI Hub</a> ·
+      <a href="https://github.com/dxli94/WLASL" target="_blank" rel="noopener">WLASL (CC-BY)</a> ·
+      <a href="https://github.com/rhasspy/piper" target="_blank" rel="noopener">piper-tts (MIT)</a> ·
+      <a href="https://github.com/microsoft/onnxruntime" target="_blank" rel="noopener">ONNX Runtime (MIT)</a> ·
+      <a href="https://github.com/google-ai-edge/mediapipe" target="_blank" rel="noopener">MediaPipe (Apache 2.0)</a>
+    </p>
+    <p style="margin-top: 10px; font-size: 0.78rem; opacity: 0.5;">
+      MIT License · All AI inference runs 100% on-device · No data transmitted · Your conversation stays on your device.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

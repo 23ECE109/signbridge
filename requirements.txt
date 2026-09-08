@@ -1,0 +1,36 @@
+# SignBridge — Python Dependencies
+# Tested on Windows 11 ARM64, Python 3.11 (miniforge)
+# Install: pip install -r requirements.txt
+
+# ── Core inference ────────────────────────────────────────────────────────────
+onnxruntime==1.18.1           # ONNX Runtime (QNN Execution Provider for Snapdragon NPU)
+numpy==1.26.4
+opencv-python==4.10.0.84      # Camera capture and frame processing
+
+# ── Qualcomm AI Hub (model download + profiling) ──────────────────────────────
+# qai-hub                     # Uncomment after: pip install qai-hub (requires Qualcomm account)
+
+# ── Audio ─────────────────────────────────────────────────────────────────────
+sounddevice==0.5.1            # Microphone input and audio playback
+soundfile==0.12.1             # WAV file read/write for TTS output
+piper-tts==1.2.0              # ARM64-native TTS (en_US-lessac-medium)
+# Note: Distil-Whisper runs via ONNX Runtime — no transformers dependency needed at runtime
+
+# ── UI ────────────────────────────────────────────────────────────────────────
+PyQt6==6.7.1                  # Main application window (ARM64 native)
+
+# ── Storage & security ────────────────────────────────────────────────────────
+cryptography==42.0.8          # AES-256 encryption for user profile + correction memory
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+scipy==1.13.1                 # kNN cosine similarity (correction memory)
+tqdm==4.66.4                  # Progress bars during enrollment
+
+# ── Training only (not needed for inference) ─────────────────────────────────
+# torch==2.3.1
+# torchvision==0.18.1
+# transformers==4.42.0
+# datasets==2.20.0
+
+# ── Optional (advanced features) ─────────────────────────────────────────────
+# onnxruntime-genai            # For Phi-3.5-Mini summarization via GenieX

@@ -1,0 +1,65 @@
+# SignBridge .gitignore
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+.conda/
+conda-meta/
+
+# ── ONNX / model weights — large binary files, download separately ────────────
+models/
+*.onnx
+*.dlc
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# ── User data — NEVER commit encrypted profiles or corrections ────────────────
+data/profiles/
+data/raw_video/
+data/collected/
+*.enc
+*.db
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── IDE / OS ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Secrets / keys ────────────────────────────────────────────────────────────
+.env
+*.key
+secrets.json
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Build artifacts ───────────────────────────────────────────────────────────
+*.spec
+dist/

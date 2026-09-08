@@ -1,0 +1,71 @@
+{
+  "_comment": "SignBridge 150-sign vocabulary — custom communication-focused dataset",
+  "_version": "1.0",
+  "_total_signs": 150,
+
+  "categories": {
+    "emergency": {
+      "count": 15,
+      "signs": ["HELP", "EMERGENCY", "PAIN", "DOCTOR", "POLICE", "FIRE", "FALL",
+                "MEDICINE", "ALLERGY", "PHONE", "AMBULANCE", "HOSPITAL", "DANGER",
+                "HURT", "URGENT"]
+    },
+    "medical": {
+      "count": 25,
+      "signs": ["HEAD", "CHEST", "STOMACH", "BREATHING", "FEVER", "WATER", "SICK",
+                "DIZZY", "PRESCRIPTION", "APPOINTMENT", "YES", "NO", "NAME", "ADDRESS",
+                "BIRTHDAY", "REPEAT", "SLOW", "UNDERSTAND", "NOT_UNDERSTAND",
+                "THANK_YOU", "PLEASE", "NEED", "WANT", "WHERE", "BLOOD_PRESSURE"]
+    },
+    "daily_interaction": {
+      "count": 40,
+      "signs": ["HELLO", "GOODBYE", "MY_NAME_IS", "CANNOT_UNDERSTAND", "WRITE_PLEASE",
+                "PHONE_NUMBER", "PRICE", "PAY", "FOOD", "BATHROOM", "WAIT", "COME_BACK",
+                "QUIET", "LOUD", "SIT", "STAND", "MORNING", "AFTERNOON", "EVENING",
+                "TODAY", "TOMORROW", "YESTERDAY", "NOW", "LATER", "FINISHED", "START",
+                "STOP", "OPEN", "CLOSE", "HOT", "COLD", "GOOD", "BAD", "HAPPY", "SAD",
+                "TIRED", "BUSY", "FREE", "IMPORTANT", "POSSIBLE"]
+    },
+    "questions_responses": {
+      "count": 20,
+      "signs": ["WHAT", "WHO", "WHEN", "WHERE", "WHY", "HOW", "HOW_MUCH",
+                "AGREE", "DISAGREE", "CORRECT", "WRONG", "AGAIN", "MORE",
+                "LESS", "MAYBE", "SOMETIMES", "ALWAYS", "NEVER", "BOTH", "EITHER"]
+    },
+    "grammar_connectors": {
+      "count": 24,
+      "signs": ["I_ME", "YOU", "HE_SHE", "WE", "THEY", "IS_AM_ARE", "NOT",
+                "ALSO", "BEFORE", "AFTER", "BECAUSE", "IF", "BUT", "AND",
+                "OR", "WITH", "WITHOUT", "FOR", "FROM", "TO", "ABOUT",
+                "THIS", "THAT", "SAME"]
+    }
+  },
+
+  "token_to_id": {
+    "<PAD>": 0,
+    "<BOS>": 1,
+    "<EOS>": 2,
+    "<UNK>": 3,
+    "i": 4, "need": 5, "help": 6, "please": 7, "thank": 8, "you": 9,
+    "medicine": 10, "morning": 11, "allergy": 12, "reaction": 13,
+    "doctor": 14, "hospital": 15, "hurt": 16, "pain": 17, "emergency": 18,
+    "water": 19, "bathroom": 20, "food": 21, "wait": 22, "yes": 23, "no": 24,
+    "understand": 25, "repeat": 26, "slow": 27, "write": 28, "phone": 29,
+    "what": 30, "where": 31, "when": 32, "how": 33, "much": 34,
+    "have": 35, "an": 36, "the": 37, "a": 38, "is": 39, "are": 40,
+    "my": 41, "name": 42, "appointment": 43, "prescription": 44, "fever": 45,
+    "dizzy": 46, "breathing": 47, "chest": 48, "head": 49, "stomach": 50
+  },
+
+  "id_to_phrase": {
+    "5_19": "I need water",
+    "5_6": "I need help",
+    "5_10": "I need medicine",
+    "35_12": "I have an allergy",
+    "35_17": "I have pain",
+    "16_49": "My head hurts",
+    "16_48": "My chest hurts",
+    "43_8": "I have an appointment",
+    "46_18": "I feel dizzy"
+  }
+}
