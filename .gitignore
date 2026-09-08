@@ -22,7 +22,8 @@ env/
 conda-meta/
 
 # ── ONNX / model weights — large binary files, download separately ────────────
-models/
+# Note: models/ (top-level weights folder) is ignored, but src/models/ (Python package) is NOT
+/models/
 *.onnx
 *.dlc
 *.bin

@@ -1,36 +1,30 @@
-# SignBridge — Python Dependencies
-# Tested on Windows 11 ARM64, Python 3.11 (miniforge)
+# SignBridge — Runtime Requirements
 # Install: pip install -r requirements.txt
+# Python 3.10 or 3.11 recommended (standard x64 Windows Python is fine for dev)
 
-# ── Core inference ────────────────────────────────────────────────────────────
-onnxruntime==1.18.1           # ONNX Runtime (QNN Execution Provider for Snapdragon NPU)
-numpy==1.26.4
-opencv-python==4.10.0.84      # Camera capture and frame processing
-
-# ── Qualcomm AI Hub (model download + profiling) ──────────────────────────────
-# qai-hub                     # Uncomment after: pip install qai-hub (requires Qualcomm account)
-
-# ── Audio ─────────────────────────────────────────────────────────────────────
-sounddevice==0.5.1            # Microphone input and audio playback
-soundfile==0.12.1             # WAV file read/write for TTS output
-piper-tts==1.2.0              # ARM64-native TTS (en_US-lessac-medium)
-# Note: Distil-Whisper runs via ONNX Runtime — no transformers dependency needed at runtime
+# ── Core vision ───────────────────────────────────────────────────────────────
+mediapipe==0.10.14          # Hand/body/face landmark extraction (CPU, works immediately)
+opencv-python==4.10.0.84    # Camera capture + frame rendering
 
 # ── UI ────────────────────────────────────────────────────────────────────────
-PyQt6==6.7.1                  # Main application window (ARM64 native)
+PyQt6==6.7.1                # Main application window
+
+# ── Speech recognition (partner ASR) ─────────────────────────────────────────
+openai-whisper==20240930    # Whisper speech-to-text (CPU mode, downloads ~150 MB once)
+sounddevice==0.5.1          # Microphone input + audio playback
+soundfile==0.12.1           # WAV read/write
+
+# ── Text-to-speech ────────────────────────────────────────────────────────────
+pyttsx3==2.90               # Windows SAPI5 TTS — works with zero download
 
 # ── Storage & security ────────────────────────────────────────────────────────
-cryptography==42.0.8          # AES-256 encryption for user profile + correction memory
+cryptography==42.0.8        # AES-256 encryption for user profiles
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
-scipy==1.13.1                 # kNN cosine similarity (correction memory)
-tqdm==4.66.4                  # Progress bars during enrollment
+numpy==1.26.4
+scipy==1.13.1               # cosine similarity for correction memory
+tqdm==4.66.4
 
-# ── Training only (not needed for inference) ─────────────────────────────────
-# torch==2.3.1
-# torchvision==0.18.1
-# transformers==4.42.0
-# datasets==2.20.0
-
-# ── Optional (advanced features) ─────────────────────────────────────────────
-# onnxruntime-genai            # For Phi-3.5-Mini summarization via GenieX
+# ── Optional: Snapdragon NPU inference (install on Snapdragon HP PC only) ─────
+# onnxruntime==1.18.1       # Uncomment for ONNX model inference
+# pip install onnxruntime   # QNN provider is included on Snapdragon Windows

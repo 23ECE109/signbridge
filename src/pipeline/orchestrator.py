@@ -1,13 +1,13 @@
 """
-Pipeline Orchestrator
-======================
-Coordinates the full SignBridge inference pipeline:
+Pipeline Orchestrator — Real-Time Demo
+=======================================
+Connects:
+  Camera → MediaPipe Landmarks → Gesture Classifier → Confidence →
+  TTS Output / Disambiguation / Re-sign Request
 
-  Camera → Landmarks → Encoder → Personalization → Context
-  → Translation + Confidence → Output Decision
+Also runs Whisper ASR in parallel for partner speech → text display.
 
-Runs the perception loop in a background thread.
-Emits signals to the UI thread via Qt signals.
+Emits results via callbacks (safe to connect to Qt signals).
 """
 
 import logging
@@ -19,218 +19,188 @@ import numpy as np
 
 from pipeline.camera import CameraCapture
 from pipeline.landmark_extractor import LandmarkExtractor
-from models.temporal_encoder import TemporalEncoder
-from models.translation_decoder import TranslationDecoder
+from models.gesture_classifier import GestureClassifier, label_to_sentence
 from models.confidence import ConfidenceEstimator, ConfidenceTier
-from personalization.user_embedding import UserProfileManager
 from personalization.correction_memory import CorrectionMemory
 from context_engine.context_window import ContextWindow
 from context_engine.topic_tag import TopicTag
 
 log = logging.getLogger("signbridge.pipeline.orchestrator")
 
-# Minimum frames in buffer before attempting translation
-MIN_FRAMES_FOR_TRANSLATION = 32
-# Minimum gap between translation attempts (seconds)
-TRANSLATION_COOLDOWN = 1.5
+CLASSIFY_INTERVAL  = 1.2   # seconds between translation attempts
+MIN_FRAMES_BUFFER  = 20    # minimum frames before classifying
 
 
 class TranslationResult:
-    """Output from one complete translation cycle."""
-
-    def __init__(
-        self,
-        text: str,
-        confidence: float,
-        tier: ConfidenceTier,
-        alternatives: list[str],
-        latency_ms: float,
-    ):
-        self.text         = text
+    def __init__(self, text, sentence, confidence, tier, alternatives, latency_ms):
+        self.text         = text          # sign label e.g. "HELP"
+        self.sentence     = sentence      # natural language e.g. "Help me, please."
         self.confidence   = confidence
         self.tier         = tier
-        self.alternatives = alternatives
+        self.alternatives = alternatives  # [(label, conf)]
         self.latency_ms   = latency_ms
 
-    def __repr__(self) -> str:
-        return (
-            f"TranslationResult(text={self.text!r}, "
-            f"conf={self.confidence:.2f}, tier={self.tier.name}, "
-            f"latency={self.latency_ms:.0f}ms)"
-        )
+    def __repr__(self):
+        return f"TranslationResult({self.sentence!r} conf={self.confidence:.2f} {self.tier.name})"
 
 
 class SignBridgePipeline:
     """
-    Central orchestrator for the SignBridge AI pipeline.
+    Central real-time pipeline orchestrator.
 
-    Callbacks (called from background thread, marshal to UI thread as needed):
-        on_translation:   Callable[[TranslationResult], None]
-        on_landmarks:     Callable[[np.ndarray], None]  — for live preview
-        on_fps_update:    Callable[[float], None]
+    Callbacks (called from background thread — marshal to Qt with signals):
+        on_translation : Callable[[TranslationResult], None]
+        on_frame       : Callable[[np.ndarray, any], None]  — (frame_rgb, landmark_result)
+        on_fps_update  : Callable[[float], None]
+        on_asr_text    : Callable[[str], None]
     """
 
-    def __init__(
-        self,
-        user_id: str = "default",
-        on_translation: Optional[Callable[[TranslationResult], None]] = None,
-        on_landmarks:   Optional[Callable[[np.ndarray], None]] = None,
-        on_fps_update:  Optional[Callable[[float], None]] = None,
-    ):
+    def __init__(self,
+                 user_id:       str = "default",
+                 on_translation: Optional[Callable] = None,
+                 on_frame:       Optional[Callable] = None,
+                 on_fps_update:  Optional[Callable] = None,
+                 on_asr_text:    Optional[Callable] = None):
+
         self.user_id        = user_id
         self.on_translation = on_translation
-        self.on_landmarks   = on_landmarks
+        self.on_frame       = on_frame
         self.on_fps_update  = on_fps_update
+        self.on_asr_text    = on_asr_text
 
-        # ── Sub-components ────────────────────────────────────────────────────
         self.camera      = CameraCapture()
-        self.extractor   = LandmarkExtractor()
-        self.encoder     = TemporalEncoder()
-        self.decoder     = TranslationDecoder()
+        self.extractor   = LandmarkExtractor(complexity=0)
+        self.classifier  = GestureClassifier(history_len=20)
         self.confidence  = ConfidenceEstimator()
-        self.user_mgr    = UserProfileManager(user_id)
         self.corrections = CorrectionMemory(user_id)
         self.context     = ContextWindow()
         self.topic       = TopicTag()
 
-        # ── State ─────────────────────────────────────────────────────────────
-        self._running         = False
+        self._running              = False
         self._pipeline_thread: Optional[threading.Thread] = None
-        self._last_translation_time = 0.0
-        self._landmark_buffer: list[np.ndarray] = []
+        self._last_classify_time   = 0.0
+        self._last_label           = ""
+        self._same_sign_count      = 0
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     def start(self) -> bool:
-        """Load all models and start the pipeline. Returns True on success."""
-        log.info("Starting SignBridge pipeline...")
+        log.info("Starting SignBridge real-time pipeline...")
 
-        ok = all([
-            self.extractor.load(),
-            self.encoder.load(),
-            self.decoder.load(),
-        ])
-
-        if not ok:
-            log.error("One or more models failed to load — check model directory")
+        if not self.extractor.load():
+            log.error("MediaPipe failed to load — install mediapipe: pip install mediapipe")
             return False
 
-        self.user_mgr.load()
         self.corrections.load()
 
-        ok_cam = self.camera.start()
-        if not ok_cam:
+        if not self.camera.start():
             log.error("Camera failed to open")
             return False
 
         self._running = True
         self._pipeline_thread = threading.Thread(
-            target=self._pipeline_loop, daemon=True
+            target=self._loop, daemon=True, name="sb-pipeline"
         )
         self._pipeline_thread.start()
-        log.info("Pipeline running")
+        log.info("Pipeline running ✅")
         return True
 
-    def stop(self) -> None:
-        """Gracefully stop the pipeline."""
+    def stop(self):
         self._running = False
         self.camera.stop()
+        self.extractor.close()
         if self._pipeline_thread:
             self._pipeline_thread.join(timeout=3.0)
         log.info("Pipeline stopped")
 
     # ── Main loop ─────────────────────────────────────────────────────────────
 
-    def _pipeline_loop(self) -> None:
-        """
-        Background loop: reads buffered frames → extracts landmarks →
-        accumulates sequence → triggers translation when ready.
-        """
+    def _loop(self):
         while self._running:
             frames = self.camera.buffer.get_window()
 
-            if len(frames) < MIN_FRAMES_FOR_TRANSLATION:
-                time.sleep(0.05)
+            if not frames:
+                time.sleep(0.03)
                 continue
 
-            # ── Per-frame landmark extraction ─────────────────────────────────
-            landmark_sequence = []
-            for frame in frames:
-                result = self.extractor.extract(frame)
-                vec    = result.to_flat_vector()
-                landmark_sequence.append(vec)
+            # Use the most recent frame for landmark extraction
+            latest_frame = frames[-1]
+            result       = self.extractor.extract(latest_frame)
+            self.classifier.update(result)
 
-                if self.on_landmarks:
-                    self.on_landmarks(vec)
+            # Emit frame + landmarks for UI rendering
+            if self.on_frame:
+                self.on_frame(latest_frame, result)
 
-            # ── Report FPS ────────────────────────────────────────────────────
             if self.on_fps_update:
                 self.on_fps_update(self.camera.fps)
 
-            # ── Translation cooldown ──────────────────────────────────────────
+            # Classify on interval
             now = time.perf_counter()
-            if now - self._last_translation_time < TRANSLATION_COOLDOWN:
-                time.sleep(0.1)
+            if (now - self._last_classify_time < CLASSIFY_INTERVAL or
+                    len(frames) < MIN_FRAMES_BUFFER):
+                time.sleep(0.03)
                 continue
 
-            self._last_translation_time = now
+            self._last_classify_time = now
+            t0 = time.perf_counter()
 
-            # ── Encode sequence ───────────────────────────────────────────────
-            t0       = time.perf_counter()
-            norm_seq = self.extractor.normalize_sequence(landmark_sequence)  # [64, 225]
-            seq_emb  = self.encoder.encode(norm_seq)                          # [256]
+            gesture = self.classifier.classify()
+            if gesture is None:
+                time.sleep(0.05)
+                continue
 
-            # ── Personalization fusion ────────────────────────────────────────
-            user_emb = self.user_mgr.get_embedding()                          # [64]
-            fused    = self.encoder.fuse_user(seq_emb, user_emb)              # [256]
+            # Avoid repeating the same sign endlessly
+            if gesture.label == self._last_label:
+                self._same_sign_count += 1
+                if self._same_sign_count > 3:
+                    time.sleep(0.1)
+                    continue
+            else:
+                self._same_sign_count = 0
+                self._last_label = gesture.label
 
-            # ── Context conditioning ──────────────────────────────────────────
-            ctx_emb  = self.context.get_embedding()
-            ctx_fused = np.concatenate([fused, ctx_emb], axis=0) if ctx_emb is not None else fused
+            sentence = label_to_sentence(gesture.label)
 
-            # ── Translate ─────────────────────────────────────────────────────
-            top_k_results = self.decoder.decode_topk(ctx_fused, k=3)  # [(text, prob), ...]
+            # Check correction memory
+            dummy_emb = np.zeros(64, dtype=np.float32)
+            override  = self.corrections.lookup(dummy_emb, threshold=0.99)  # high threshold = rarely fires unless explicit
 
-            # ── Correction memory override ────────────────────────────────────
-            override = self.corrections.lookup(seq_emb, threshold=0.85)
+            # Build top-k as (text, prob) for confidence estimator
+            top_k = [(sentence, gesture.confidence)]
+            for lbl, c in gesture.alternatives:
+                top_k.append((label_to_sentence(lbl), c))
 
-            # ── Confidence estimation ─────────────────────────────────────────
-            conf_score, tier = self.confidence.score(
-                top_k_results,
-                correction_override=override,
-            )
+            conf_score, tier = self.confidence.score(top_k, correction_override=override)
+            latency = (time.perf_counter() - t0) * 1000
 
-            best_text = override if override else top_k_results[0][0]
-            alts      = [t for t, _ in top_k_results[1:]]
-            latency   = (time.perf_counter() - t0) * 1000  # ms
-
-            result = TranslationResult(
-                text        = best_text,
+            tr = TranslationResult(
+                text        = gesture.label,
+                sentence    = override if override else sentence,
                 confidence  = conf_score,
                 tier        = tier,
-                alternatives= alts,
+                alternatives= [label_to_sentence(lbl) for lbl, _ in gesture.alternatives],
                 latency_ms  = latency,
             )
 
-            log.info(f"Translation: {result}")
+            log.info(f"🤟 {tr}")
 
             if self.on_translation:
-                self.on_translation(result)
+                self.on_translation(tr)
 
-            # ── Update context window ─────────────────────────────────────────
+            # Update context on high confidence
             if tier == ConfidenceTier.HIGH:
-                self.context.add(best_text)
+                self.context.add(tr.sentence)
 
+            self.classifier.reset()
             time.sleep(0.05)
 
-    # ── User feedback ─────────────────────────────────────────────────────────
+    # ── Feedback ──────────────────────────────────────────────────────────────
 
-    def submit_correction(self, seq_embedding: np.ndarray, correct_text: str) -> None:
-        """Called when user taps 'Incorrect' and provides the right translation."""
-        self.corrections.store(seq_embedding, correct_text)
-        log.info(f"Correction stored: {correct_text!r}")
+    def submit_correction(self, correct_sentence: str):
+        dummy_emb = np.zeros(64, dtype=np.float32)
+        self.corrections.store(dummy_emb, correct_sentence)
+        log.info(f"Correction stored: {correct_sentence!r}")
 
-    def set_topic(self, topic: str) -> None:
-        """Set session topic tag (Medical / General / Emergency / Work / Education)."""
+    def set_topic(self, topic: str):
         self.topic.set(topic)
-        log.info(f"Topic set to: {topic}")
